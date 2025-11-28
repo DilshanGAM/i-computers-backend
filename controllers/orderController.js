@@ -79,7 +79,7 @@ export async function createOrder(req, res) {
 		const savedOrder = await newOrder.save();
 		//create md5 hash of orderId and total with secret key
 		const hash = crypto.createHash("md5")
-			.update("1228399" + orderId + total.toFixed(2) + "LKR"+ "NjczODkyMzkxNDI1MDA5NDgxNTQxMTQyOTQ3MjkxNzMwNDczNTYz".toUpperCase()).digest("hex").toUpperCase();
+			.update("1228399" + orderId + total.toFixed(2) + "LKR"+ "MTU4MDE4MTE1ODE5NDM3MjU4NzUxMzI0ODYyMDA1Mzk5ODE3MjUzMw==".toUpperCase()).digest("hex").toUpperCase();
 
 		
 		
