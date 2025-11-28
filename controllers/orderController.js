@@ -4,7 +4,6 @@ import { isAdmin } from "./userController.js";
 import crypto from "crypto";
 
 export async function createOrder(req, res) {
-
 	//ORD000001
 	if (req.user == null) {
 		res.status(401).json({
@@ -78,20 +77,31 @@ export async function createOrder(req, res) {
 
 		const savedOrder = await newOrder.save();
 		//create md5 hash of orderId and total with secret key
-		const hash = crypto.createHash("md5")
-			.update("1228399" + orderId + total.toFixed(2) + "LKR"+ "MTU4MDE4MTE1ODE5NDM3MjU4NzUxMzI0ODYyMDA1Mzk5ODE3MjUzMw==".toUpperCase()).digest("hex").toUpperCase();
+		const hash = crypto
+			.createHash("md5")
+			.update(
+				"1228399" +
+					orderId +
+					total.toFixed(2) +
+					"LKR" +
+					crypto
+						.createHash("md5")
+						.update("NjczODkyMzkxNDI1MDA5NDgxNTQxMTQyOTQ3MjkxNzMwNDczNTYz")
+						.digest("hex")
+						.toUpperCase()
+			)
+			.digest("hex")
+			.toUpperCase();
 
-		
-		
-		
+		console.log(orderId);
 
 		return res.json({
 			message: "Order placed successfully",
 			orderId: orderId,
 			payhereHash: hash,
-			email : req.user.email,
-			orderID : orderId,
-			amount : total.toFixed(2),
+			email: req.user.email,
+			orderID: orderId,
+			amount: total.toFixed(2),
 		});
 	} catch (error) {
 		return res.status(500).json({
@@ -147,5 +157,51 @@ export async function updateOrderStatus(req, res) {
 			message: "Error updating order status",
 			error: error.message,
 		});
+	}
+}
+//localhost : NjczODkyMzkxNDI1MDA5NDgxNTQxMTQyOTQ3MjkxNzMwNDczNTYz
+export function validateOrderPayment(req, res) {
+	console.log("Payment validation request received");
+	//read form  data merchant_id, order_id, payhere_amount, payhere_currency, status_code, md5sig
+	const {
+		merchant_id,
+		order_id,
+		payhere_amount,
+		payhere_currency,
+		status_code,
+		md5sig,
+	} = req.body;
+
+	//generate md5 hash
+	const localMd5sig = crypto
+		.createHash("md5")
+		.update(
+			"1228399" +
+				order_id +
+				payhere_amount +
+				payhere_currency +
+				status_code +
+				crypto
+					.createHash("md5")
+					.update("MTU4MDE4MTE1ODE5NDM3MjU4NzUxMzI0ODYyMDA1Mzk5ODE3MjUzMw==")
+					.digest("hex")
+					.toUpperCase() +
+				status_code
+		)
+		.digest("hex")
+		.toUpperCase();
+	if (localMd5sig === md5sig) {
+		if(status_code == 2){
+			Order.updateOne({ orderId: order_id }, { status: "paid" }).then(() => {
+				return res.status(200).send("OK");
+			}).catch((error)=>{
+				return res.status(500).send("Error updating order status");
+			});
+		}
+		else{
+			return res.status(400).send("Payment not completed");
+		}
+	} else {
+		return res.status(400).send("Invalid MD5 signature");
 	}
 }
